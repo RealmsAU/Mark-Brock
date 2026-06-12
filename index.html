@@ -1,0 +1,2421 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Mark Brock - Video Viewer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0f172a;
+      margin: 0;
+      padding: 24px;
+      color: #0f172a;
+    }
+    .page-wrap {
+      display: flex;
+      justify-content: center;
+    }
+    .viewer-card {
+      background: #ffffff;
+      border-radius: 18px;
+      padding: 24px 24px 32px;
+      width: 100%;
+      max-width: 980px;
+      box-shadow:
+        0 18px 45px rgba(15, 23, 42, 0.35),
+        0 0 0 1px rgba(148, 163, 184, 0.18);
+    }
+    .client-header {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: #0f172a;
+    }
+    .client-subtitle {
+      margin-top: 4px;
+      margin-bottom: 20px;
+      color: #64748b;
+      font-size: 14px;
+    }
+    .table-wrap {
+      margin-top: 8px;
+      border-radius: 14px;
+      border: 1px solid #e2e8f0;
+      overflow: hidden;
+      background: #f8fafc;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #ffffff;
+    }
+    thead {
+      background: #f1f5f9;
+    }
+    th {
+      text-align: left;
+      padding: 10px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #64748b;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    td {
+      padding: 10px 14px;
+      vertical-align: middle;
+      border-bottom: 1px solid #e2e8f0;
+      background: #ffffff;
+    }
+    tr:last-child td {
+      border-bottom: none;
+    }
+    .thumb-cell {
+      width: 170px;
+    }
+    .thumb-wrapper {
+      display: inline-block;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.35);
+      transform: translateZ(0);
+    }
+    .thumb-img {
+      display: block;
+      width: 160px;
+      height: auto;
+      cursor: pointer;
+      transition: transform 0.18s ease-out, box-shadow 0.18s ease-out;
+    }
+    .thumb-img:hover {
+      transform: translateY(-2px) scale(1.01);
+      box-shadow: 0 16px 35px rgba(15, 23, 42, 0.45);
+    }
+    .info-cell {
+      width: auto;
+    }
+    .play-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: #0f172a;
+      font-weight: 600;
+      font-size: 15px;
+    }
+    .play-link:hover .filename-text {
+      color: #0ea5e9;
+    }
+    .play-icon {
+      width: 24px;
+      height: 24px;
+      fill: #0ea5e9;
+      filter: drop-shadow(0 4px 8px rgba(14, 165, 233, 0.55));
+    }
+    .filename-text {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 360px;
+    }
+    .meta-line {
+      margin-top: 4px;
+      font-size: 13px;
+      color: #64748b;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .dot-sep {
+      opacity: 0.7;
+    }
+    .share-cell {
+      width: 140px;
+      text-align: right;
+      white-space: nowrap;
+    }
+    .icon-button {
+      background: #0f172a;
+      border-radius: 999px;
+      border: none;
+      padding: 7px 10px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.45);
+      transition: transform 0.16s ease-out, box-shadow 0.16s ease-out, background 0.16s ease-out;
+    }
+    .icon-button:hover {
+      transform: translateY(-1px);
+      background: #020617;
+      box-shadow: 0 16px 35px rgba(15, 23, 42, 0.6);
+    }
+    .share-icon,
+    .download-icon {
+      width: 18px;
+      height: 18px;
+      fill: #e5e7eb;
+    }
+    .download-button {
+      margin-left: 6px;
+    }
+    .site-footer {
+      margin-top: 18px;
+      font-size: 12px;
+      color: #94a3b8;
+      text-align: right;
+    }
+
+    /* Overlay */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.88);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 999;
+    }
+    .overlay.visible {
+      display: flex;
+    }
+    .overlay-inner {
+      position: relative;
+      max-width: 90%;
+      max-height: 90%;
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.9);
+      border-radius: 12px;
+      overflow: hidden;
+      background: #020617;
+      z-index: 1;
+    }
+    .overlay-close {
+      position: absolute;
+      top: 10px;
+      right: 14px;
+      font-size: 30px;
+      color: #e5e7eb;
+      background: rgba(15, 23, 42, 0.7);
+      border-radius: 999px;
+      border: none;
+      width: 34px;
+      height: 34px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+
+    /* Back to top */
+    #backToTop {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #0ea5e9;
+      color: white;
+      border: none;
+      padding: 11px;
+      border-radius: 999px;
+      cursor: pointer;
+      display: none;
+      box-shadow: 0 14px 30px rgba(14, 165, 233, 0.7);
+    }
+    #backToTop.visible {
+      display: inline-flex;
+    }
+    #backToTop svg {
+      width: 20px;
+      height: 20px;
+      fill: #e5e7eb;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 22px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #0f172a;
+      color: #e5e7eb;
+      padding: 9px 18px;
+      border-radius: 999px;
+      font-size: 13px;
+      box-shadow: 0 14px 30px rgba(15, 23, 42, 0.7);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease-out, transform 0.25s ease-out;
+    }
+    .toast.visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(-4px);
+    }
+
+   /* -----------------------------------------
+   MOBILE LAYOUT (portrait phones)
+   ----------------------------------------- */
+@media (max-width: 650px) {
+
+  /* Turn each row into a stacked card */
+  tbody tr {
+    display: flex;
+    flex-direction: column;
+    padding: 14px 12px;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  tbody tr td {
+    display: block;
+    width: 100%;
+    padding: 8px 0;
+    border-bottom: none;
+  }
+
+  /* Thumbnail stays at the top */
+  .thumb-cell {
+    width: 100% !important;
+  }
+  .thumb-wrapper {
+    width: 100%;
+    max-width: 260px;
+  }
+  .thumb-img {
+    width: 100%;
+    max-width: 260px;
+  }
+
+  /* Video info section */
+  .info-cell {
+    width: 100% !important;
+    margin-top: 6px;
+  }
+
+  .filename-text {
+    max-width: 100% !important;
+    white-space: normal;
+    font-size: 1.05rem;
+    font-weight: 600;
+  }
+
+  .meta-line {
+    font-size: 13px;
+    margin-top: 4px;
+  }
+
+  /* Share/download buttons move under the info */
+  .share-cell {
+    width: 100% !important;
+    text-align: left !important;
+    margin-top: 10px;
+    display: flex;
+    gap: 12px;
+  }
+
+  .icon-button {
+    padding: 8px 12px;
+  }
+
+  /* Hide table headers on mobile */
+  thead {
+    display: none;
+  }
+
+  /* Remove table look */
+  table {
+    border-collapse: separate;
+  }
+}
+
+
+  </style>
+</head>
+
+<body>
+  <div class="page-wrap">
+    <div class="viewer-card">
+      <h1 class="client-header">Mark Brock</h1>
+      <div class="client-subtitle">Video Library</div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Preview</th>
+              <th>Video</th>
+              <th style="text-align:right;">Share</th>
+            </tr>
+          </thead>
+          <tbody>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/2006 Christmas Morning _ Ethan Birthday.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/2006 Christmas Morning _ Ethan Birthday.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./2006 Christmas Morning & Ethan Birthday.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/d9olxnzuz1oppgtp8iy3c/2006-Christmas-Morning-Ethan-Birthday.mp4?rlkey=6e6yk2anadwr6ai7hdvwxp7ap"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">2006 Christmas Morning & Ethan Birthday.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">1,880.77 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">00:37:48</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/d9olxnzuz1oppgtp8iy3c/2006-Christmas-Morning-Ethan-Birthday.mp4?rlkey=6e6yk2anadwr6ai7hdvwxp7ap&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/d9olxnzuz1oppgtp8iy3c/2006-Christmas-Morning-Ethan-Birthday.mp4?rlkey=6e6yk2anadwr6ai7hdvwxp7ap&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Christmas 2006_ Mason Dance_ Lachlan Tooth.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Christmas 2006_ Mason Dance_ Lachlan Tooth.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Christmas 2006, Mason Dance, Lachlan Tooth.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/v5s8lgv1ut46da9gixtc7/Christmas-2006-Mason-Dance-Lachlan-Tooth.mp4?rlkey=czgzvhaaovu28f2myr6mjs7va"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Christmas 2006, Mason Dance, Lachlan Tooth.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">925.85 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">00:22:29</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/v5s8lgv1ut46da9gixtc7/Christmas-2006-Mason-Dance-Lachlan-Tooth.mp4?rlkey=czgzvhaaovu28f2myr6mjs7va&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/v5s8lgv1ut46da9gixtc7/Christmas-2006-Mason-Dance-Lachlan-Tooth.mp4?rlkey=czgzvhaaovu28f2myr6mjs7va&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Dive SA.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Dive SA.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Dive SA.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/x7lkx0muvz4ruw8orz6bj/Dive-SA.mp4?rlkey=x99d92y99evt1jslrwmcjq7ud"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Dive SA.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">2,806.80 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">01:03:59</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/x7lkx0muvz4ruw8orz6bj/Dive-SA.mp4?rlkey=x99d92y99evt1jslrwmcjq7ud&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/x7lkx0muvz4ruw8orz6bj/Dive-SA.mp4?rlkey=x99d92y99evt1jslrwmcjq7ud&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Faile Easter 1992.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Faile Easter 1992.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Faile Easter 1992.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/0wjktlylx7cwj5lv4yl5m/Faile-Easter-1992.mp4?rlkey=g860gie1m2ht2mbbkh3fmwnv8"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Faile Easter 1992.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">4,025.11 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">02:04:45</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/0wjktlylx7cwj5lv4yl5m/Faile-Easter-1992.mp4?rlkey=g860gie1m2ht2mbbkh3fmwnv8&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/0wjktlylx7cwj5lv4yl5m/Faile-Easter-1992.mp4?rlkey=g860gie1m2ht2mbbkh3fmwnv8&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Lachlan 10th Birthday _ 2008.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Lachlan 10th Birthday _ 2008.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Lachlan 10th Birthday - 2008.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/svck4avxeumkhgpyxz9hp/Lachlan-10th-Birthday-2008.mp4?rlkey=sckfa31aft79vkv3lr50kdk2y"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Lachlan 10th Birthday - 2008.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">2,114.56 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">00:59:42</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/svck4avxeumkhgpyxz9hp/Lachlan-10th-Birthday-2008.mp4?rlkey=sckfa31aft79vkv3lr50kdk2y&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/svck4avxeumkhgpyxz9hp/Lachlan-10th-Birthday-2008.mp4?rlkey=sckfa31aft79vkv3lr50kdk2y&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Nativity Camp_ Mason Dance_ CB 40th Party_ Molly School _Aaron Dennis_s conflicted copy_.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Nativity Camp_ Mason Dance_ CB 40th Party_ Molly School _Aaron Dennis_s conflicted copy_.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Nativity Camp, Mason Dance, CB 40th Party, Molly School (Aaron Dennis's conflicted copy).mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/6fgqofs62jkgtpewbcxpy/Nativity-Camp-Mason-Dance-CB-40th-Party-Molly-School-Aaron-Dennis-s-conflicted-copy.mp4?rlkey=a73sr0kfex4s8yprbdxy12k6w"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Nativity Camp, Mason Dance, CB 40th Party, Molly School (Aaron Dennis's conflicted copy).mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">1,809.36 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">00:57:14</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/6fgqofs62jkgtpewbcxpy/Nativity-Camp-Mason-Dance-CB-40th-Party-Molly-School-Aaron-Dennis-s-conflicted-copy.mp4?rlkey=a73sr0kfex4s8yprbdxy12k6w&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/6fgqofs62jkgtpewbcxpy/Nativity-Camp-Mason-Dance-CB-40th-Party-Molly-School-Aaron-Dennis-s-conflicted-copy.mp4?rlkey=a73sr0kfex4s8yprbdxy12k6w&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Nativity Camp_ Mason Dance_ CB 40th Party_ Molly School.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Nativity Camp_ Mason Dance_ CB 40th Party_ Molly School.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Nativity Camp, Mason Dance, CB 40th Party, Molly School.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/thdt4eb1e9h6ngmij1dp8/Nativity-Camp-Mason-Dance-CB-40th-Party-Molly-School.mp4?rlkey=5ziqz6p481s8c6j5te3im54js"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Nativity Camp, Mason Dance, CB 40th Party, Molly School.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">1,809.36 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">00:57:14</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/thdt4eb1e9h6ngmij1dp8/Nativity-Camp-Mason-Dance-CB-40th-Party-Molly-School.mp4?rlkey=5ziqz6p481s8c6j5te3im54js&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/thdt4eb1e9h6ngmij1dp8/Nativity-Camp-Mason-Dance-CB-40th-Party-Molly-School.mp4?rlkey=5ziqz6p481s8c6j5te3im54js&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Our Wedding Day _ 11th Sept 1993.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Our Wedding Day _ 11th Sept 1993.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Our Wedding Day - 11th Sept 1993.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/6seafw1kj5jxtfyk6v6gt/Our-Wedding-Day-11th-Sept-1993.mp4?rlkey=hjaupkfk6txiunibpzzzp9ohp"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Our Wedding Day - 11th Sept 1993.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">4,661.56 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">01:59:52</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/6seafw1kj5jxtfyk6v6gt/Our-Wedding-Day-11th-Sept-1993.mp4?rlkey=hjaupkfk6txiunibpzzzp9ohp&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/6seafw1kj5jxtfyk6v6gt/Our-Wedding-Day-11th-Sept-1993.mp4?rlkey=hjaupkfk6txiunibpzzzp9ohp&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Pa Shooting.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Pa Shooting.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Pa Shooting.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/ozpsrraw4lbarxn1tadje/Pa-Shooting.mp4?rlkey=7hpbe6l5pcyzowij9kx1fkrg1"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Pa Shooting.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">440.57 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">00:17:27</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/ozpsrraw4lbarxn1tadje/Pa-Shooting.mp4?rlkey=7hpbe6l5pcyzowij9kx1fkrg1&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/ozpsrraw4lbarxn1tadje/Pa-Shooting.mp4?rlkey=7hpbe6l5pcyzowij9kx1fkrg1&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Stage Performance_ Pedal Prix.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Stage Performance_ Pedal Prix.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Stage Performance, Pedal Prix.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/80it0t7l478tzs7jv6iv5/Stage-Performance-Pedal-Prix.mp4?rlkey=cvyyl83y16jbou5m1vtdzwge3"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Stage Performance, Pedal Prix.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">2,682.65 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">01:02:27</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/80it0t7l478tzs7jv6iv5/Stage-Performance-Pedal-Prix.mp4?rlkey=cvyyl83y16jbou5m1vtdzwge3&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/80it0t7l478tzs7jv6iv5/Stage-Performance-Pedal-Prix.mp4?rlkey=cvyyl83y16jbou5m1vtdzwge3&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Tape 01.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Tape 01.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Tape 01.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/xrusawwz8by52a871bcgz/Tape-01.mp4?rlkey=wk2etkpnws7f159srg3l1lr0n"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Tape 01.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">2,001.84 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">00:58:09</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/xrusawwz8by52a871bcgz/Tape-01.mp4?rlkey=wk2etkpnws7f159srg3l1lr0n&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/xrusawwz8by52a871bcgz/Tape-01.mp4?rlkey=wk2etkpnws7f159srg3l1lr0n&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Tape 02.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Tape 02.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Tape 02.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/sm6009va5anj8trb28r38/Tape-02.mp4?rlkey=mvgk3aj8pqmu091hi7ojp5yrz"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Tape 02.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">4,606.01 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">01:29:08</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/sm6009va5anj8trb28r38/Tape-02.mp4?rlkey=mvgk3aj8pqmu091hi7ojp5yrz&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/sm6009va5anj8trb28r38/Tape-02.mp4?rlkey=mvgk3aj8pqmu091hi7ojp5yrz&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Tape 03.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Tape 03.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Tape 03.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/68wd1dq1t2g33vapqkif0/Tape-03.mp4?rlkey=m4b3ub7vdi04cs941g667sokz"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Tape 03.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">3,871.14 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">01:29:08</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/68wd1dq1t2g33vapqkif0/Tape-03.mp4?rlkey=m4b3ub7vdi04cs941g667sokz&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/68wd1dq1t2g33vapqkif0/Tape-03.mp4?rlkey=m4b3ub7vdi04cs941g667sokz&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Tape 04.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Tape 04.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Tape 04.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/brm2fjp3oqb5hf4un4ubj/Tape-04.mp4?rlkey=on03bmal39kee0bbsubw7uxt7"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Tape 04.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">3,229.91 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">01:27:14</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/brm2fjp3oqb5hf4un4ubj/Tape-04.mp4?rlkey=on03bmal39kee0bbsubw7uxt7&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/brm2fjp3oqb5hf4un4ubj/Tape-04.mp4?rlkey=on03bmal39kee0bbsubw7uxt7&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Tape 05.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Tape 05.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Tape 05.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/6n9qr8gf7cvju3jp136k7/Tape-05.mp4?rlkey=lc4rerk7wi1xh87wib4brq8gh"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Tape 05.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">3,568.91 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">01:32:49</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/6n9qr8gf7cvju3jp136k7/Tape-05.mp4?rlkey=lc4rerk7wi1xh87wib4brq8gh&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/6n9qr8gf7cvju3jp136k7/Tape-05.mp4?rlkey=lc4rerk7wi1xh87wib4brq8gh&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Tape 06.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Tape 06.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Tape 06.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/y7hjjnk6kcy8ddlce5mm4/Tape-06.mp4?rlkey=hx4hewx86qmysqf4mnwiwkp9m"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Tape 06.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">4,257.33 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">02:03:22</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/y7hjjnk6kcy8ddlce5mm4/Tape-06.mp4?rlkey=hx4hewx86qmysqf4mnwiwkp9m&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/y7hjjnk6kcy8ddlce5mm4/Tape-06.mp4?rlkey=hx4hewx86qmysqf4mnwiwkp9m&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Tape 07.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Tape 07.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Tape 07.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/mvmcbfq5xx7sxqrz9km9f/Tape-07.mp4?rlkey=g5lzcqupxcm6b3pqnml3oky4n"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Tape 07.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">3,021.63 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">01:32:51</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/mvmcbfq5xx7sxqrz9km9f/Tape-07.mp4?rlkey=g5lzcqupxcm6b3pqnml3oky4n&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/mvmcbfq5xx7sxqrz9km9f/Tape-07.mp4?rlkey=g5lzcqupxcm6b3pqnml3oky4n&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Tape 08.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Tape 08.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Tape 08.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/hl3orjw5t9fo3nxmupco8/Tape-08.mp4?rlkey=w0e2f0aplfek5sy5u2cpc3kb4"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Tape 08.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">5,180.65 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">01:31:24</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/hl3orjw5t9fo3nxmupco8/Tape-08.mp4?rlkey=w0e2f0aplfek5sy5u2cpc3kb4&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/hl3orjw5t9fo3nxmupco8/Tape-08.mp4?rlkey=w0e2f0aplfek5sy5u2cpc3kb4&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Tape 09.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Tape 09.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Tape 09.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/bv9ecr45yfel5qtsrztzq/Tape-09.mp4?rlkey=8dikzp4xzf274euwwz2sb7rs5"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Tape 09.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">5,069.22 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">01:32:30</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/bv9ecr45yfel5qtsrztzq/Tape-09.mp4?rlkey=8dikzp4xzf274euwwz2sb7rs5&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/bv9ecr45yfel5qtsrztzq/Tape-09.mp4?rlkey=8dikzp4xzf274euwwz2sb7rs5&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Tape 10.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Tape 10.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Tape 10.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/o8xy5f2tzqy97ev9a7eqa/Tape-10.mp4?rlkey=zv6ljh3xbg6zwslbz7sde91bk"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Tape 10.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">5,401.54 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">01:32:30</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/o8xy5f2tzqy97ev9a7eqa/Tape-10.mp4?rlkey=zv6ljh3xbg6zwslbz7sde91bk&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/o8xy5f2tzqy97ev9a7eqa/Tape-10.mp4?rlkey=zv6ljh3xbg6zwslbz7sde91bk&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Tape 11.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Tape 11.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Tape 11.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/r9z7ebanj8ss34zperxmr/Tape-11.mp4?rlkey=1h4y8101dtk3p27m78says4wa"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Tape 11.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">4,852.10 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">01:32:29</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/r9z7ebanj8ss34zperxmr/Tape-11.mp4?rlkey=1h4y8101dtk3p27m78says4wa&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/r9z7ebanj8ss34zperxmr/Tape-11.mp4?rlkey=1h4y8101dtk3p27m78says4wa&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Tape 12.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Tape 12.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Tape 12.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/h4vslhs56bq4ng1t6bxj9/Tape-12.mp4?rlkey=4gyezstsdcyhyaddk1hy55iiu"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Tape 12.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">1,916.85 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">00:35:14</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/h4vslhs56bq4ng1t6bxj9/Tape-12.mp4?rlkey=4gyezstsdcyhyaddk1hy55iiu&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/h4vslhs56bq4ng1t6bxj9/Tape-12.mp4?rlkey=4gyezstsdcyhyaddk1hy55iiu&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Tape 13.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Tape 13.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Tape 13.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/awc8fmjh5gnfm8zi2lyal/Tape-13.mp4?rlkey=ma6cw9tmcrh9chk7x8d0cbhkm"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Tape 13.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">3,159.19 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">01:08:56</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/awc8fmjh5gnfm8zi2lyal/Tape-13.mp4?rlkey=ma6cw9tmcrh9chk7x8d0cbhkm&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/awc8fmjh5gnfm8zi2lyal/Tape-13.mp4?rlkey=ma6cw9tmcrh9chk7x8d0cbhkm&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Tape 14.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Tape 14.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Tape 14.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/1cw47uv2wje18qz0p2qxb/Tape-14.mp4?rlkey=992mcrgszsashnvzqfwkkk3zx"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Tape 14.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">4,774.22 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">01:32:29</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/1cw47uv2wje18qz0p2qxb/Tape-14.mp4?rlkey=992mcrgszsashnvzqfwkkk3zx&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/1cw47uv2wje18qz0p2qxb/Tape-14.mp4?rlkey=992mcrgszsashnvzqfwkkk3zx&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Tape 15.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Tape 15.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Tape 15.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/2rng4eigqkxvw91ab08jt/Tape-15.mp4?rlkey=chvdxhsz9jcoudx3f1sn2rwgh"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Tape 15.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">5,369.12 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">01:31:59</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/2rng4eigqkxvw91ab08jt/Tape-15.mp4?rlkey=chvdxhsz9jcoudx3f1sn2rwgh&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/2rng4eigqkxvw91ab08jt/Tape-15.mp4?rlkey=chvdxhsz9jcoudx3f1sn2rwgh&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Tape 16.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Tape 16.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Tape 16.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/2e4ufy327iv4ri31m6lhp/Tape-16.mp4?rlkey=t1lvfiexb4focu9w6uhgum3mj"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Tape 16.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">5,344.74 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">01:32:28</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/2e4ufy327iv4ri31m6lhp/Tape-16.mp4?rlkey=t1lvfiexb4focu9w6uhgum3mj&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/2e4ufy327iv4ri31m6lhp/Tape-16.mp4?rlkey=t1lvfiexb4focu9w6uhgum3mj&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Tape 17.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Tape 17.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Tape 17.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/5r08krjkm0iy3oryer6we/Tape-17.mp4?rlkey=1sm6o3mej48fc2pwhgnhq0oe8"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Tape 17.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">4,684.40 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">01:32:14</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/5r08krjkm0iy3oryer6we/Tape-17.mp4?rlkey=1sm6o3mej48fc2pwhgnhq0oe8&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/5r08krjkm0iy3oryer6we/Tape-17.mp4?rlkey=1sm6o3mej48fc2pwhgnhq0oe8&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Tape 18.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Tape 18.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Tape 18.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/t2uo447xm8urzfjobe7yn/Tape-18.mp4?rlkey=yqi6nz1q1hmvhcqp0udziv2ho"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Tape 18.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">5,459.60 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">01:32:24</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/t2uo447xm8urzfjobe7yn/Tape-18.mp4?rlkey=yqi6nz1q1hmvhcqp0udziv2ho&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/t2uo447xm8urzfjobe7yn/Tape-18.mp4?rlkey=yqi6nz1q1hmvhcqp0udziv2ho&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Tape 19.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Tape 19.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Tape 19.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/5q43q9ynehrlpwr81jcm8/Tape-19.mp4?rlkey=ceb6ww6hnohx8oaksomn9sosm"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Tape 19.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">3,200.84 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">01:20:57</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/5q43q9ynehrlpwr81jcm8/Tape-19.mp4?rlkey=ceb6ww6hnohx8oaksomn9sosm&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/5q43q9ynehrlpwr81jcm8/Tape-19.mp4?rlkey=ceb6ww6hnohx8oaksomn9sosm&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Tape 30.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Tape 30.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Tape 30.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/qikz8y863iewg5sokphkr/Tape-30.mp4?rlkey=uk8l7x72ve1neyymkf6vtwatj"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Tape 30.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">2,842.30 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">01:02:07</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/qikz8y863iewg5sokphkr/Tape-30.mp4?rlkey=uk8l7x72ve1neyymkf6vtwatj&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/qikz8y863iewg5sokphkr/Tape-30.mp4?rlkey=uk8l7x72ve1neyymkf6vtwatj&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Tape 31.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Tape 31.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Tape 31.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/0v8hq1iaks6kdwaverkem/Tape-31.mp4?rlkey=9v4orn6kd6681pcgkwrzp18ob"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Tape 31.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">2,899.17 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">00:50:15</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/0v8hq1iaks6kdwaverkem/Tape-31.mp4?rlkey=9v4orn6kd6681pcgkwrzp18ob&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/0v8hq1iaks6kdwaverkem/Tape-31.mp4?rlkey=9v4orn6kd6681pcgkwrzp18ob&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Tape 32.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Tape 32.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Tape 32.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/btam7oxy02g9eozzdrw8j/Tape-32.mp4?rlkey=i6epru2rn5ftt92v6200aupuo"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Tape 32.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">2,577.10 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">01:02:05</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/btam7oxy02g9eozzdrw8j/Tape-32.mp4?rlkey=i6epru2rn5ftt92v6200aupuo&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/btam7oxy02g9eozzdrw8j/Tape-32.mp4?rlkey=i6epru2rn5ftt92v6200aupuo&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Tape 33.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Tape 33.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Tape 33.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/ha7bntyw9s2zsinaivyin/Tape-33.mp4?rlkey=vdke933a7qnq8fcb722srpr91"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Tape 33.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">3,085.60 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">00:57:41</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/ha7bntyw9s2zsinaivyin/Tape-33.mp4?rlkey=vdke933a7qnq8fcb722srpr91&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/ha7bntyw9s2zsinaivyin/Tape-33.mp4?rlkey=vdke933a7qnq8fcb722srpr91&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Tape 34.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Tape 34.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Tape 34.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/mve605dvxgxghk2wybsk8/Tape-34.mp4?rlkey=5s4o8grzkry12l0p2tyvwr8cz"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Tape 34.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">2,362.77 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">01:02:31</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/mve605dvxgxghk2wybsk8/Tape-34.mp4?rlkey=5s4o8grzkry12l0p2tyvwr8cz&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/mve605dvxgxghk2wybsk8/Tape-34.mp4?rlkey=5s4o8grzkry12l0p2tyvwr8cz&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Tape 35.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Tape 35.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Tape 35.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/u5v85drihww2cf7rnwg0s/Tape-35.mp4?rlkey=thj9bq2bm081fxbz4iiaadojv"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Tape 35.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">2,596.17 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">00:53:31</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/u5v85drihww2cf7rnwg0s/Tape-35.mp4?rlkey=thj9bq2bm081fxbz4iiaadojv&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/u5v85drihww2cf7rnwg0s/Tape-35.mp4?rlkey=thj9bq2bm081fxbz4iiaadojv&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Tape 36.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Tape 36.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Tape 36.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/iqhp5m7y8absly3klx7rb/Tape-36.mp4?rlkey=bx3v1a2k3n56l3zm6uxuv8fje"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Tape 36.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">3,163.44 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">01:02:20</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/iqhp5m7y8absly3klx7rb/Tape-36.mp4?rlkey=bx3v1a2k3n56l3zm6uxuv8fje&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/iqhp5m7y8absly3klx7rb/Tape-36.mp4?rlkey=bx3v1a2k3n56l3zm6uxuv8fje&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+<tr>
+  <td class="thumb-cell">
+    <div class="thumb-wrapper">
+      <img src="thumbnails/Ultrasound _ 30th Dec 1999.jpg"
+           class="thumb-img"
+           data-thumb="thumbnails/Ultrasound _ 30th Dec 1999.jpg"
+           onclick="openImageFromThumb(this)">
+    </div>
+  </td>
+
+  <td class="info-cell">
+    <a href="#"
+       class="play-link"
+       data-local="./Ultrasound - 30th Dec 1999.mp4"
+       data-dropbox="https://dl.dropboxusercontent.com/s/hpck008ilvfn95gkq21n6/Ultrasound-30th-Dec-1999.mp4?rlkey=rpqph4d5xusfbib6gnimcssnx"
+       onclick="openVideoFromLink(this); return false;">
+      <svg class="play-icon" viewBox="0 0 24 24">
+        <polygon points="5,3 19,12 5,21" />
+      </svg>
+      <span class="filename-text">Ultrasound - 30th Dec 1999.mp4</span>
+    </a>
+
+    <div class="meta-line">
+      <span class="size-text">222.92 MB</span>
+      <span class="dot-sep">•</span>
+      <span class="duration-text">00:10:06</span>
+    </div>
+  </td>
+
+  <td class="share-cell">
+
+    <!-- Share button -->
+    <button class="icon-button"
+            data-dropbox="https://www.dropbox.com/s/hpck008ilvfn95gkq21n6/Ultrasound-30th-Dec-1999.mp4?rlkey=rpqph4d5xusfbib6gnimcssnx&dl=0"
+            onclick="copyShareLinkFromButton(this)"
+            title="Copy Dropbox share link">
+      <svg class="share-icon" viewBox="0 0 24 24">
+        <path d="M14 3l7 4-7 4-7-4 7-4zm7 6v6l-7 4v-6l7-4zm-9 4v6l-7-4V9l7 4z"/>
+      </svg>
+    </button>
+
+    <!-- Download button -->
+    <a class="icon-button download-button"
+       data-dropbox-download="https://dl.dropboxusercontent.com/s/hpck008ilvfn95gkq21n6/Ultrasound-30th-Dec-1999.mp4?rlkey=rpqph4d5xusfbib6gnimcssnx&dl=1"
+       onclick="downloadFromDropbox(this); return false;"
+       title="Download video">
+      <svg class="download-icon" viewBox="0 0 24 24">
+        <path d="M12 3v12l4-4h-3V3h-2v8H8l4 4zm-7 9v6h14v-6h2v8H3v-8h2z"/>
+      </svg>
+    </a>
+
+  </td>
+</tr>
+
+          </tbody>
+        </table>
+      </div>
+
+      <footer class="site-footer">
+        Video Digitisation Services | Ph: 0411 657 799
+      </footer>
+    </div>
+  </div>
+
+  <div class="overlay" id="videoOverlay" onclick="overlayBackgroundClick(event)">
+    <div class="overlay-inner" onclick="event.stopPropagation()"></div>
+  </div>
+
+  <div class="toast" id="toast">Link copied!</div>
+
+  <button id="backToTop" onclick="scrollToTop()">
+    <svg viewBox="0 0 24 24">
+      <path d="M12 4l-7 8h4v8h6v-8h4z"/>
+    </svg>
+  </button>
+
+  <script>
+function isLocalContext() {
+  return window.location.protocol === 'file:';
+}
+
+function downloadFromDropbox(el) {
+  if (isLocalContext()) {
+    showToast("File already on USB");
+    return;
+  }
+
+  const url = el.getAttribute('data-dropbox-download');
+  window.open(url, '_blank');
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  if (isLocalContext()) {
+    document.querySelectorAll('.download-button').forEach(btn => {
+      btn.style.display = 'none';
+    });
+  }
+});
+function openImageFromThumb(el) {
+  const src = el.getAttribute('data-thumb');
+  const overlay = document.getElementById('videoOverlay');
+  const inner = overlay.querySelector('.overlay-inner');
+
+  inner.innerHTML = `
+    <button class="overlay-close" onclick="closeOverlay()">×</button>
+    <img src="${src}" style="max-width:100%; max-height:100%; display:block;">
+  `;
+
+  overlay.classList.add('visible');
+}
+
+function openVideoFromLink(el) {
+  const overlay = document.getElementById('videoOverlay');
+  const inner = overlay.querySelector('.overlay-inner');
+
+  const localUrl = el.getAttribute('data-local');
+  const dropboxUrl = el.getAttribute('data-dropbox');
+
+  const src = isLocalContext() ? localUrl : dropboxUrl;
+
+  inner.innerHTML = `
+    <button class="overlay-close" onclick="closeOverlay()">×</button>
+    <video controls autoplay style="max-width:100%; max-height:100%; display:block;">
+      <source src="${src}" type="video/mp4">
+    </video>
+  `;
+
+  overlay.classList.add('visible');
+}
+
+function closeOverlay() {
+  const overlay = document.getElementById('videoOverlay');
+  const inner = overlay.querySelector('.overlay-inner');
+  inner.innerHTML = "";
+  overlay.classList.remove('visible');
+}
+
+function overlayBackgroundClick(event) {
+  if (event.target.id === 'videoOverlay') {
+    closeOverlay();
+  }
+}
+
+function copyShareLinkFromButton(el) {
+  const url = el.getAttribute('data-dropbox');
+  navigator.clipboard.writeText(url).then(() => {
+    showToast("Link copied!");
+  });
+}
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('visible');
+  setTimeout(() => toast.classList.remove('visible'), 1800);
+}
+</script>
+
+</body>
+</html>
